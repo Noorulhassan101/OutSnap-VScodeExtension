@@ -1,0 +1,164 @@
+{
+  "name": "outsnap",
+  "displayName": "OutSnap",
+  "description": "Automatic Terminal Screenshot Capture — On Your Terms",
+  "version": "1.0.0",
+  "publisher": "MNoor-Ul-Hassan",
+  "engines": {
+    "vscode": "^1.93.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MNoor-Ul-Hassan/TermSnap"
+  },
+  "activationEvents": [
+    "*"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "termsnap.enableCapture",
+        "title": "TermSnap: Enable Capture",
+        "category": "TermSnap"
+      },
+      {
+        "command": "termsnap.disableCapture",
+        "title": "TermSnap: Disable Capture",
+        "category": "TermSnap"
+      },
+      {
+        "command": "termsnap.toggleCapture",
+        "title": "TermSnap: Toggle Capture",
+        "category": "TermSnap"
+      },
+      {
+        "command": "termsnap.openScreenshotsFolder",
+        "title": "TermSnap: Open Screenshots Folder",
+        "category": "TermSnap"
+      },
+      {
+        "command": "termsnap.exportToWord",
+        "title": "TermSnap: Export to Word Document",
+        "category": "TermSnap"
+      },
+      {
+        "command": "termsnap.clearAllScreenshots",
+        "title": "TermSnap: Clear All Screenshots",
+        "category": "TermSnap"
+      },
+      {
+        "command": "termsnap.openSettings",
+        "title": "TermSnap: Open Settings",
+        "category": "TermSnap"
+      },
+      {
+        "command": "termsnap.showCaptureLog",
+        "title": "TermSnap: Show Capture Log",
+        "category": "TermSnap"
+      },
+      {
+        "command": "termsnap.setCropPercentage",
+        "title": "TermSnap: Set Crop Percentage",
+        "category": "TermSnap"
+      }
+    ],
+    "configuration": {
+      "title": "TermSnap",
+      "properties": {
+        "termsnap.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Master on/off toggle for TermSnap capture."
+        },
+        "termsnap.sessionOnly": {
+          "type": "boolean",
+          "default": true,
+          "description": "Reset TermSnap to OFF when VSCode closes."
+        },
+        "termsnap.outputPath": {
+          "type": "string",
+          "default": "~/Desktop/OutSnap/",
+          "description": "Folder where screenshots are saved."
+        },
+        "termsnap.renderDelay": {
+          "type": "number",
+          "default": 350,
+          "minimum": 100,
+          "maximum": 1000,
+          "description": "Milliseconds to wait before capturing the screenshot after command ends."
+        },
+        "termsnap.confirmBeforeCapture": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show a toast before each capture to confirm saving."
+        },
+        "termsnap.excludeCommands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": ["ls", "cd", "clear", "cls", "pwd"],
+          "description": "Commands to ignore (no screenshots taken)."
+        },
+        "termsnap.imageFormat": {
+          "type": "string",
+          "enum": ["png", "jpg"],
+          "default": "png",
+          "description": "Output format for the screenshot: png or jpg."
+        },
+        "termsnap.autoExportDocx": {
+          "type": "boolean",
+          "default": false,
+          "description": "Auto-generate .docx at the end of each session (Not fully supported in pure local mode without hook on exit, handled manually for now)."
+        },
+        "termsnap.statusBarPosition": {
+          "type": "string",
+          "enum": ["left", "right"],
+          "default": "left",
+          "description": "Status bar button position: left or right."
+        },
+        "termsnap.showCaptureToast": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show toast notification after each capture."
+        },
+        "termsnap.cropToTerminal": {
+          "type": "boolean",
+          "default": true,
+          "description": "Experimental: Crop the bottom portion of the screenshot to simulate capturing only the terminal."
+        },
+        "termsnap.terminalCropPercentage": {
+          "type": "number",
+          "default": 45,
+          "minimum": 10,
+          "maximum": 100,
+          "description": "The percentage of the bottom screen to crop when cropToTerminal is enabled."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "dependencies": {
+    "docx": "^8.5.0",
+    "node-screenshots": "^0.2.8"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.93.0",
+    "@types/node": "20.x",
+    "typescript": "^5.3.3",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.56.0"
+  }
+}
