@@ -2,8 +2,9 @@
   "name": "outsnap",
   "displayName": "OutSnap",
   "description": "Automatic Terminal Screenshot Capture — On Your Terms",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "MNoor-Ul-Hassan",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.93.0"
   },
@@ -21,117 +22,154 @@
   "contributes": {
     "commands": [
       {
-        "command": "termsnap.enableCapture",
-        "title": "TermSnap: Enable Capture",
-        "category": "TermSnap"
+        "command": "outsnap.enableCapture",
+        "title": "OutSnap: Enable Capture",
+        "category": "OutSnap"
       },
       {
-        "command": "termsnap.disableCapture",
-        "title": "TermSnap: Disable Capture",
-        "category": "TermSnap"
+        "command": "outsnap.disableCapture",
+        "title": "OutSnap: Disable Capture",
+        "category": "OutSnap"
       },
       {
-        "command": "termsnap.toggleCapture",
-        "title": "TermSnap: Toggle Capture",
-        "category": "TermSnap"
+        "command": "outsnap.toggleCapture",
+        "title": "OutSnap: Toggle Capture",
+        "category": "OutSnap"
       },
       {
-        "command": "termsnap.openScreenshotsFolder",
-        "title": "TermSnap: Open Screenshots Folder",
-        "category": "TermSnap"
+        "command": "outsnap.openScreenshotsFolder",
+        "title": "OutSnap: Open Screenshots Folder",
+        "category": "OutSnap"
       },
       {
-        "command": "termsnap.exportToWord",
-        "title": "TermSnap: Export to Word Document",
-        "category": "TermSnap"
+        "command": "outsnap.exportToWord",
+        "title": "OutSnap: Export to Word Document",
+        "category": "OutSnap"
       },
       {
-        "command": "termsnap.clearAllScreenshots",
-        "title": "TermSnap: Clear All Screenshots",
-        "category": "TermSnap"
+        "command": "outsnap.clearAllScreenshots",
+        "title": "OutSnap: Clear All Screenshots",
+        "category": "OutSnap"
       },
       {
-        "command": "termsnap.openSettings",
-        "title": "TermSnap: Open Settings",
-        "category": "TermSnap"
+        "command": "outsnap.openSettings",
+        "title": "OutSnap: Open Settings",
+        "category": "OutSnap"
       },
       {
-        "command": "termsnap.showCaptureLog",
-        "title": "TermSnap: Show Capture Log",
-        "category": "TermSnap"
+        "command": "outsnap.showCaptureLog",
+        "title": "OutSnap: Show Capture Log",
+        "category": "OutSnap"
       },
       {
-        "command": "termsnap.setCropPercentage",
-        "title": "TermSnap: Set Crop Percentage",
-        "category": "TermSnap"
+        "command": "outsnap.setCropPercentage",
+        "title": "OutSnap: Set Crop Percentage",
+        "category": "OutSnap"
       }
     ],
     "configuration": {
-      "title": "TermSnap",
+      "title": "OutSnap",
       "properties": {
-        "termsnap.enabled": {
+        "outsnap.enabled": {
           "type": "boolean",
           "default": false,
-          "description": "Master on/off toggle for TermSnap capture."
+          "description": "Master on/off toggle for OutSnap capture."
         },
-        "termsnap.sessionOnly": {
+        "outsnap.sessionOnly": {
           "type": "boolean",
           "default": true,
-          "description": "Reset TermSnap to OFF when VSCode closes."
+          "description": "Reset OutSnap to OFF when VSCode closes."
         },
-        "termsnap.outputPath": {
+        "outsnap.storageMode": {
           "type": "string",
-          "default": "~/Desktop/OutSnap/",
-          "description": "Folder where screenshots are saved."
+          "enum": [
+            "workspace",
+            "global",
+            "custom"
+          ],
+          "default": "workspace",
+          "description": "Where to save screenshots: workspace (project folder), global (standard folder), or custom (specified path)."
         },
-        "termsnap.renderDelay": {
+        "outsnap.folderName": {
+          "type": "string",
+          "default": ".outsnap",
+          "description": "Subfolder name created inside the workspace root (only for 'workspace' mode)."
+        },
+        "outsnap.autoGitignore": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically add the screenshot folder to .gitignore on first capture in a git repo."
+        },
+        "outsnap.fallbackPath": {
+          "type": "string",
+          "default": "~/outsnap/",
+          "description": "Used only when no workspace folder is open."
+        },
+        "outsnap.customPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to use when storageMode is 'custom'."
+        },
+        "outsnap.renderDelay": {
           "type": "number",
           "default": 350,
           "minimum": 100,
           "maximum": 1000,
           "description": "Milliseconds to wait before capturing the screenshot after command ends."
         },
-        "termsnap.confirmBeforeCapture": {
+        "outsnap.confirmBeforeCapture": {
           "type": "boolean",
           "default": false,
           "description": "Show a toast before each capture to confirm saving."
         },
-        "termsnap.excludeCommands": {
+        "outsnap.excludeCommands": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "default": ["ls", "cd", "clear", "cls", "pwd"],
+          "default": [
+            "ls",
+            "cd",
+            "clear",
+            "cls",
+            "pwd"
+          ],
           "description": "Commands to ignore (no screenshots taken)."
         },
-        "termsnap.imageFormat": {
+        "outsnap.imageFormat": {
           "type": "string",
-          "enum": ["png", "jpg"],
+          "enum": [
+            "png",
+            "jpg"
+          ],
           "default": "png",
           "description": "Output format for the screenshot: png or jpg."
         },
-        "termsnap.autoExportDocx": {
+        "outsnap.autoExportDocx": {
           "type": "boolean",
           "default": false,
-          "description": "Auto-generate .docx at the end of each session (Not fully supported in pure local mode without hook on exit, handled manually for now)."
+          "description": "Auto-generate .docx at the end of each session."
         },
-        "termsnap.statusBarPosition": {
+        "outsnap.statusBarPosition": {
           "type": "string",
-          "enum": ["left", "right"],
+          "enum": [
+            "left",
+            "right"
+          ],
           "default": "left",
           "description": "Status bar button position: left or right."
         },
-        "termsnap.showCaptureToast": {
+        "outsnap.showCaptureToast": {
           "type": "boolean",
           "default": true,
           "description": "Show toast notification after each capture."
         },
-        "termsnap.cropToTerminal": {
+        "outsnap.cropToTerminal": {
           "type": "boolean",
           "default": true,
           "description": "Experimental: Crop the bottom portion of the screenshot to simulate capturing only the terminal."
         },
-        "termsnap.terminalCropPercentage": {
+        "outsnap.terminalCropPercentage": {
           "type": "number",
           "default": 45,
           "minimum": 10,

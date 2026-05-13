@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { StatusBar } from './statusBar';
 import { CaptureEngine } from './captureEngine';
 import { Logger } from './logger';
@@ -12,22 +13,21 @@ export function activate(context: vscode.ExtensionContext) {
     
     // Check first run notification
     const globalState = context.globalState;
-    const hasRun = globalState.get<boolean>('termsnap.hasRun', false);
 
     // Register Commands
     context.subscriptions.push(
-        vscode.commands.registerCommand('termsnap.enableCapture', async () => {
+        vscode.commands.registerCommand('outsnap.enableCapture', async () => {
             await Settings.setEnabled(true);
             statusBar.updateState(true);
             showFirstRun(globalState);
         }),
 
-        vscode.commands.registerCommand('termsnap.disableCapture', async () => {
+        vscode.commands.registerCommand('outsnap.disableCapture', async () => {
             await Settings.setEnabled(false);
             statusBar.updateState(false);
         }),
 
-        vscode.commands.registerCommand('termsnap.toggleCapture', async () => {
+        vscode.commands.registerCommand('outsnap.toggleCapture', async () => {
             const newState = !statusBar.isEnabled;
             await Settings.setEnabled(newState);
             statusBar.updateState(newState);
@@ -36,39 +36,58 @@ export function activate(context: vscode.ExtensionContext) {
             }
         }),
 
-        vscode.commands.registerCommand('termsnap.openScreenshotsFolder', () => {
-            const outPath = Settings.outputPath;
-            vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(path.join(outPath, 'fakefile.txt'))); 
-            // fakefile to open folder
+        vscode.commands.registerCommand('outsnap.openScreenshotsFolder', () => {
+            // This now needs to be workspace aware or open the fallback
+            const folders = vscode.workspace.workspaceFolders;
+            let openPath = Settings.fallbackPath;
+            if (Settings.storageMode === 'workspace' && folders && folders.length > 0) {
+                openPath = path.join(folders[0].uri.fsPath, Settings.folderName);
+            } else if (Settings.storageMode === 'custom' && Settings.customPath) {
+                openPath = Settings.customPath;
+            }
+
+            if (fs.existsSync(openPath)) {
+                vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(openPath));
+            } else {
+                vscode.window.showErrorMessage(`Storage folder does not exist yet: ${openPath}`);
+            }
         }),
 
-        vscode.commands.registerCommand('termsnap.exportToWord', async () => {
+        vscode.commands.registerCommand('outsnap.exportToWord', async () => {
             await WordExport.export();
         }),
 
-        vscode.commands.registerCommand('termsnap.clearAllScreenshots', async () => {
-            const selection = await vscode.window.showWarningMessage('Are you sure you want to delete all screenshots in the TermSnap folder?', 'Yes', 'No');
+        vscode.commands.registerCommand('outsnap.clearAllScreenshots', async () => {
+            const selection = await vscode.window.showWarningMessage('Are you sure you want to delete all screenshots in the current storage folder?', 'Yes', 'No');
             if (selection === 'Yes') {
-                Logger.clearAllScreenshots(Settings.outputPath);
-                vscode.window.showInformationMessage('All TermSnap screenshots deleted.');
+                // Determine current path
+                const folders = vscode.workspace.workspaceFolders;
+                let clearPath = Settings.fallbackPath;
+                if (Settings.storageMode === 'workspace' && folders && folders.length > 0) {
+                    clearPath = path.join(folders[0].uri.fsPath, Settings.folderName);
+                } else if (Settings.storageMode === 'custom' && Settings.customPath) {
+                    clearPath = Settings.customPath;
+                }
+                Logger.clearAllScreenshots(clearPath);
+                vscode.window.showInformationMessage('Screenshots cleared.');
             }
         }),
 
-        vscode.commands.registerCommand('termsnap.openSettings', () => {
-            vscode.commands.executeCommand('workbench.action.openSettings', 'termsnap');
+        vscode.commands.registerCommand('outsnap.openSettings', () => {
+            vscode.commands.executeCommand('workbench.action.openSettings', 'outsnap');
         }),
 
-        vscode.commands.registerCommand('termsnap.showCaptureLog', () => {
+        vscode.commands.registerCommand('outsnap.showCaptureLog', () => {
             const records = Logger.getRecords();
             if (records.length === 0) {
-                vscode.window.showInformationMessage('TermSnap Log is empty.');
+                vscode.window.showInformationMessage('OutSnap Log is empty.');
                 return;
             }
             const items = records.map(r => `${r.timestamp.toLocaleTimeString()} - ${r.command}`);
-            vscode.window.showQuickPick(items, { title: 'TermSnap Capture Log' });
+            vscode.window.showQuickPick(items, { title: 'OutSnap Capture Log' });
         }),
 
-        vscode.commands.registerCommand('termsnap.setCropPercentage', async () => {
+        vscode.commands.registerCommand('outsnap.setCropPercentage', async () => {
             const current = Settings.terminalCropPercentage;
             const result = await vscode.window.showInputBox({
                 prompt: 'Enter crop percentage (10-100)',
@@ -81,7 +100,7 @@ export function activate(context: vscode.ExtensionContext) {
             });
             if (result) {
                 const num = parseInt(result, 10);
-                await vscode.workspace.getConfiguration('termsnap').update('terminalCropPercentage', num, vscode.ConfigurationTarget.Global);
+                await vscode.workspace.getConfiguration('outsnap').update('terminalCropPercentage', num, vscode.ConfigurationTarget.Global);
             }
         })
     );
@@ -89,7 +108,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Listen to configuration changes
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(e => {
-            if (e.affectsConfiguration('termsnap.terminalCropPercentage') || e.affectsConfiguration('termsnap.cropToTerminal')) {
+            if (e.affectsConfiguration('outsnap.terminalCropPercentage') || e.affectsConfiguration('outsnap.cropToTerminal')) {
                 statusBar.updateCropText();
             }
         })
@@ -106,19 +125,17 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 function showFirstRun(globalState: vscode.Memento) {
-    const hasRun = globalState.get<boolean>('termsnap.hasRun', false);
+    const hasRun = globalState.get<boolean>('outsnap.hasRun', false);
     if (!hasRun) {
         vscode.window.showInformationMessage(
-            `📷 OutSnap is now active. Screenshots will be saved to: ${Settings.outputPath}`,
-            'Open Folder', 'Settings', 'Got it'
+            `📷 OutSnap is now active. Screenshots will be saved based on your Storage Mode setting.`,
+            'Settings', 'Got it'
         ).then(selection => {
-            if (selection === 'Open Folder') {
-                vscode.commands.executeCommand('termsnap.openScreenshotsFolder');
-            } else if (selection === 'Settings') {
-                vscode.commands.executeCommand('termsnap.openSettings');
+            if (selection === 'Settings') {
+                vscode.commands.executeCommand('outsnap.openSettings');
             }
         });
-        globalState.update('termsnap.hasRun', true);
+        globalState.update('outsnap.hasRun', true);
     }
 }
 
@@ -127,3 +144,5 @@ export function deactivate() {
         WordExport.export();
     }
 }
+
+

@@ -4,7 +4,7 @@ import * as path from 'path';
 
 export class Settings {
     private static get configuration(): vscode.WorkspaceConfiguration {
-        return vscode.workspace.getConfiguration('termsnap');
+        return vscode.workspace.getConfiguration('outsnap');
     }
 
     static get enabled(): boolean {
@@ -12,21 +12,41 @@ export class Settings {
     }
 
     static async setEnabled(value: boolean): Promise<void> {
-        // Only save globally if it's not sessionOnly.
         const sessionOnly = this.sessionOnly;
         if (!sessionOnly) {
             await this.configuration.update('enabled', value, vscode.ConfigurationTarget.Global);
         }
-        // In session mode, we might just track state in memory, but for UI binding, we use a global context var or temporary settings update.
-        await vscode.commands.executeCommand('setContext', 'termsnap:enabled', value);
+        await vscode.commands.executeCommand('setContext', 'outsnap:enabled', value);
     }
 
     static get sessionOnly(): boolean {
         return this.configuration.get<boolean>('sessionOnly', true);
     }
 
-    static get outputPath(): string {
-        const configuredPath = this.configuration.get<string>('outputPath', '~/Desktop/OutSnap/');
+    static get storageMode(): 'workspace' | 'global' | 'custom' {
+        return this.configuration.get<'workspace' | 'global' | 'custom'>('storageMode', 'workspace');
+    }
+
+    static get folderName(): string {
+        return this.configuration.get<string>('folderName', '.outsnap');
+    }
+
+    static get autoGitignore(): boolean {
+        return this.configuration.get<boolean>('autoGitignore', true);
+    }
+
+    static get fallbackPath(): string {
+        const configuredPath = this.configuration.get<string>('fallbackPath', '~/outsnap/');
+        return this.resolvePath(configuredPath);
+    }
+
+    static get customPath(): string {
+        const configuredPath = this.configuration.get<string>('customPath', '');
+        return this.resolvePath(configuredPath);
+    }
+
+    private static resolvePath(configuredPath: string): string {
+        if (!configuredPath) return '';
         if (configuredPath.startsWith('~/')) {
             return path.join(os.homedir(), configuredPath.slice(2));
         }

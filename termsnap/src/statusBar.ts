@@ -12,10 +12,10 @@ export class StatusBar {
             : vscode.StatusBarAlignment.Left;
             
         this.statusBarItem = vscode.window.createStatusBarItem(alignment, 100);
-        this.statusBarItem.command = 'termsnap.toggleCapture';
+        this.statusBarItem.command = 'outsnap.toggleCapture';
         
         this.cropStatusBarItem = vscode.window.createStatusBarItem(alignment, 99);
-        this.cropStatusBarItem.command = 'termsnap.setCropPercentage';
+        this.cropStatusBarItem.command = 'outsnap.setCropPercentage';
 
         // Initialize state
         this.updateState(Settings.enabled);
@@ -43,7 +43,7 @@ export class StatusBar {
     public updateCropText() {
         if (Settings.cropToTerminal) {
             this.cropStatusBarItem.text = `$(screen-normal) Crop: ${Settings.terminalCropPercentage}%`;
-            this.cropStatusBarItem.tooltip = 'Change TermSnap Crop Percentage';
+            this.cropStatusBarItem.tooltip = 'Change OutSnap Crop Percentage';
             this.cropStatusBarItem.show();
         } else {
             this.cropStatusBarItem.hide();

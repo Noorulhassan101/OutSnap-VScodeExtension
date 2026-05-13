@@ -5,20 +5,15 @@ import { Settings } from './settings';
 import { StatusBar } from './statusBar';
 import { Logger } from './logger';
 import { Monitor, Window } from 'node-screenshots';
+import * as os from 'os';
 
 export class CaptureEngine {
     private statusBar: StatusBar;
+    private processedGitignores = new Set<string>();
+    private fallbackWarningShown = false;
 
     constructor(statusBar: StatusBar) {
         this.statusBar = statusBar;
-        this.ensureOutputPath();
-    }
-
-    private ensureOutputPath() {
-        const outPath = Settings.outputPath;
-        if (!fs.existsSync(outPath)) {
-            fs.mkdirSync(outPath, { recursive: true });
-        }
     }
 
     private sanitizeFilename(cmd: string): string {
@@ -57,16 +52,85 @@ export class CaptureEngine {
             );
             if (action === 'Skip' || !action) return;
             if (action === 'Turn off confirmations') {
-                await vscode.workspace.getConfiguration('termsnap').update('confirmBeforeCapture', false, vscode.ConfigurationTarget.Global);
+                await vscode.workspace.getConfiguration('outsnap').update('confirmBeforeCapture', false, vscode.ConfigurationTarget.Global);
             }
         }
 
-        await this.captureAndSave(commandText);
+        await this.captureAndSave(commandText, event);
     }
 
-    private async captureAndSave(commandText: string) {
+    private async resolveSavePath(event: vscode.TerminalShellExecutionEndEvent): Promise<string> {
+        const mode = Settings.storageMode;
+        let targetDir = '';
+
+        if (mode === 'workspace') {
+            const folders = vscode.workspace.workspaceFolders;
+            if (folders && folders.length > 0) {
+                let folder = folders[0];
+                const cwd = event.terminal.shellIntegration?.cwd;
+                if (cwd) {
+                    const matchedFolder = vscode.workspace.getWorkspaceFolder(cwd);
+                    if (matchedFolder) {
+                        folder = matchedFolder;
+                    }
+                }
+
+                targetDir = path.join(folder.uri.fsPath, Settings.folderName);
+                await this.handleGitignore(folder.uri.fsPath, Settings.folderName);
+            } else {
+                targetDir = Settings.fallbackPath;
+                if (!this.fallbackWarningShown) {
+                    vscode.window.showWarningMessage("No workspace open — saving to fallback folder.");
+                    this.fallbackWarningShown = true;
+                }
+            }
+        } else if (mode === 'custom') {
+            targetDir = Settings.customPath;
+            if (!targetDir || !fs.existsSync(targetDir)) {
+                targetDir = Settings.fallbackPath;
+            }
+        } else {
+            // global mode
+            targetDir = Settings.fallbackPath;
+        }
+
+        if (!fs.existsSync(targetDir)) {
+            try {
+                fs.mkdirSync(targetDir, { recursive: true });
+            } catch (err) {
+                console.error('Failed to create storage directory', err);
+                // Fallback to home if everything fails
+                targetDir = path.join(os.homedir(), 'outsnap');
+                if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+            }
+        }
+
+        return targetDir;
+    }
+
+    private async handleGitignore(workspaceRoot: string, folderName: string) {
+        if (!Settings.autoGitignore) return;
+        if (this.processedGitignores.has(workspaceRoot)) return;
+
+        const gitignorePath = path.join(workspaceRoot, '.gitignore');
+        if (fs.existsSync(gitignorePath)) {
+            try {
+                const content = fs.readFileSync(gitignorePath, 'utf8');
+                const normalizedFolderName = folderName.startsWith('.') ? folderName : `./${folderName}`;
+                if (!content.includes(folderName)) {
+                    const lineEnd = content.endsWith('\n') ? '' : '\n';
+                    fs.appendFileSync(gitignorePath, `${lineEnd}${folderName}/\n`);
+                }
+            } catch (err) {
+                console.error('Failed to update .gitignore', err);
+            }
+        }
+        this.processedGitignores.add(workspaceRoot);
+    }
+
+    private async captureAndSave(commandText: string, event: vscode.TerminalShellExecutionEndEvent) {
         try {
-            this.ensureOutputPath();
+            const savePath = await this.resolveSavePath(event);
             
             // Try to find VSCode window, or default to primary monitor
             const windows = Window.all();
@@ -100,10 +164,9 @@ export class CaptureEngine {
 
             const format = Settings.imageFormat;
             const now = new Date();
-            // YYYY-MM-DD_HH-MM-SS_<sanitised-command>.png
             const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`;
             const filename = `${timestamp}_${this.sanitizeFilename(commandText)}.${format}`;
-            const fullPath = path.join(Settings.outputPath, filename);
+            const fullPath = path.join(savePath, filename);
 
             fs.writeFileSync(fullPath, imageBuffer);
 
@@ -129,7 +192,9 @@ export class CaptureEngine {
             this.statusBar.flashStatus(commandText);
 
         } catch (error: any) {
-            vscode.window.showErrorMessage(`TermSnap capture failed: ${error.message}`);
+            vscode.window.showErrorMessage(`OutSnap capture failed: ${error.message}`);
         }
     }
 }
+
+
