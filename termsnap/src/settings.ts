@@ -65,6 +65,10 @@ export class Settings {
         return this.configuration.get<string[]>('excludeCommands', []);
     }
 
+    static get captureOnlySuccessful(): boolean {
+        return this.configuration.get<boolean>('captureOnlySuccessful', true);
+    }
+
     static get imageFormat(): 'png' | 'jpg' {
         return this.configuration.get<'png' | 'jpg'>('imageFormat', 'png');
     }
@@ -87,5 +91,21 @@ export class Settings {
 
     static get terminalCropPercentage(): number {
         return this.configuration.get<number>('terminalCropPercentage', 45);
+    }
+
+    static get labMode(): boolean {
+        return this.configuration.get<boolean>('labMode', false);
+    }
+
+    static get labDocument(): string {
+        return this.configuration.get<string>('labDocument', '');
+    }
+
+    static get captionStyle(): 'timestamp' | 'command' | 'both' | 'none' {
+        return this.configuration.get<'timestamp' | 'command' | 'both' | 'none'>('captionStyle', 'both');
+    }
+
+    static get imageWidth(): number {
+        return this.configuration.get<number>('imageWidth', 6);
     }
 }

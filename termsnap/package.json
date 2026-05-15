@@ -65,6 +65,26 @@
         "command": "outsnap.setCropPercentage",
         "title": "OutSnap: Set Crop Percentage",
         "category": "OutSnap"
+      },
+      {
+        "command": "outsnap.setLabDocument",
+        "title": "OutSnap: Set Lab Document",
+        "category": "OutSnap"
+      },
+      {
+        "command": "outsnap.setCurrentTask",
+        "title": "OutSnap: Set Current Task",
+        "category": "OutSnap"
+      },
+      {
+        "command": "outsnap.nextTask",
+        "title": "OutSnap: Next Task",
+        "category": "OutSnap"
+      },
+      {
+        "command": "outsnap.insertScreenshots",
+        "title": "OutSnap: Insert Screenshots into Lab Document",
+        "category": "OutSnap"
       }
     ],
     "configuration": {
@@ -136,6 +156,11 @@
           ],
           "description": "Commands to ignore (no screenshots taken)."
         },
+        "outsnap.captureOnlySuccessful": {
+          "type": "boolean",
+          "default": true,
+          "description": "Only capture screenshots for commands that exit successfully (exit code 0)."
+        },
         "outsnap.imageFormat": {
           "type": "string",
           "enum": [
@@ -175,6 +200,34 @@
           "minimum": 10,
           "maximum": 100,
           "description": "The percentage of the bottom screen to crop when cropToTerminal is enabled."
+        },
+        "outsnap.labMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable lab report / assignment mode."
+        },
+        "outsnap.labDocument": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the lab document. Auto-detected if empty."
+        },
+        "outsnap.captionStyle": {
+          "type": "string",
+          "enum": [
+            "timestamp",
+            "command",
+            "both",
+            "none"
+          ],
+          "default": "none",
+          "description": "What to show in the caption below each screenshot."
+        },
+        "outsnap.imageWidth": {
+          "type": "number",
+          "default": 6,
+          "minimum": 1,
+          "maximum": 8,
+          "description": "Inserted image width in inches (1–8)."
         }
       }
     }
@@ -188,15 +241,19 @@
     "test": "node ./out/test/runTest.js"
   },
   "dependencies": {
+    "@types/jszip": "^3.4.0",
     "docx": "^8.5.0",
+    "image-size": "^1.2.0",
+    "jszip": "^3.10.1",
+    "mammoth": "^1.12.0",
     "node-screenshots": "^0.2.8"
   },
   "devDependencies": {
-    "@types/vscode": "^1.93.0",
     "@types/node": "20.x",
-    "typescript": "^5.3.3",
+    "@types/vscode": "^1.93.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
-    "eslint": "^8.56.0"
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3"
   }
 }

@@ -6,20 +6,32 @@ import { CaptureEngine } from './captureEngine';
 import { Logger } from './logger';
 import { WordExport } from './wordExport';
 import { Settings } from './settings';
+import { TaskTracker } from './taskTracker';
+import { LabDetector } from './labDetector';
+import { LabExporter } from './labExporter';
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
+    (global as any).extensionContext = context;
     const statusBar = new StatusBar();
-    const captureEngine = new CaptureEngine(statusBar);
+    const captureEngine = new CaptureEngine(statusBar, context);
     
-    // Check first run notification
-    const globalState = context.globalState;
+    // Initialize Task Tracker
+    TaskTracker.init(context);
+
+    // Initial Lab Detection
+    if (Settings.labMode) {
+        await LabDetector.detectLabDocument(context);
+    }
 
     // Register Commands
     context.subscriptions.push(
         vscode.commands.registerCommand('outsnap.enableCapture', async () => {
             await Settings.setEnabled(true);
             statusBar.updateState(true);
-            showFirstRun(globalState);
+            showFirstRun(context.globalState);
+            if (Settings.labMode) {
+                await LabDetector.detectLabDocument(context);
+            }
         }),
 
         vscode.commands.registerCommand('outsnap.disableCapture', async () => {
@@ -32,12 +44,14 @@ export function activate(context: vscode.ExtensionContext) {
             await Settings.setEnabled(newState);
             statusBar.updateState(newState);
             if (newState) {
-                showFirstRun(globalState);
+                showFirstRun(context.globalState);
+                if (Settings.labMode) {
+                    await LabDetector.detectLabDocument(context);
+                }
             }
         }),
 
         vscode.commands.registerCommand('outsnap.openScreenshotsFolder', () => {
-            // This now needs to be workspace aware or open the fallback
             const folders = vscode.workspace.workspaceFolders;
             let openPath = Settings.fallbackPath;
             if (Settings.storageMode === 'workspace' && folders && folders.length > 0) {
@@ -57,10 +71,25 @@ export function activate(context: vscode.ExtensionContext) {
             await WordExport.export();
         }),
 
+        vscode.commands.registerCommand('outsnap.insertScreenshots', async () => {
+            await LabExporter.export(context);
+        }),
+
+        vscode.commands.registerCommand('outsnap.setLabDocument', async () => {
+            await LabDetector.setLabDocument(context);
+        }),
+
+        vscode.commands.registerCommand('outsnap.setCurrentTask', async () => {
+            await TaskTracker.pickTask();
+        }),
+
+        vscode.commands.registerCommand('outsnap.nextTask', () => {
+            TaskTracker.nextTask();
+        }),
+
         vscode.commands.registerCommand('outsnap.clearAllScreenshots', async () => {
             const selection = await vscode.window.showWarningMessage('Are you sure you want to delete all screenshots in the current storage folder?', 'Yes', 'No');
             if (selection === 'Yes') {
-                // Determine current path
                 const folders = vscode.workspace.workspaceFolders;
                 let clearPath = Settings.fallbackPath;
                 if (Settings.storageMode === 'workspace' && folders && folders.length > 0) {
@@ -111,15 +140,16 @@ export function activate(context: vscode.ExtensionContext) {
             if (e.affectsConfiguration('outsnap.terminalCropPercentage') || e.affectsConfiguration('outsnap.cropToTerminal')) {
                 statusBar.updateCropText();
             }
+            if (e.affectsConfiguration('outsnap.labMode')) {
+                TaskTracker.updateVisibility();
+                if (Settings.labMode) {
+                    LabDetector.detectLabDocument(context);
+                }
+            }
         })
     );
 
-    // Listen to shell integration
-    context.subscriptions.push(
-        vscode.window.onDidEndTerminalShellExecution(async (e) => {
-            await captureEngine.handleCommandEnd(e);
-        })
-    );
+
 
     context.subscriptions.push(statusBar);
 }
@@ -144,5 +174,3 @@ export function deactivate() {
         WordExport.export();
     }
 }
-
-
